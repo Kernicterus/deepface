@@ -1,0 +1,14 @@
+faces_detected/
+face_data.npy
+face_by_video.csv
+videos/
+vid1/
+
+*.jpg
+*.png
+*.jpeg
+*.mp4
+*.avi
+*.mov
+*.flv
+*.wmv
