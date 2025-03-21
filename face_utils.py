@@ -2,13 +2,10 @@ import os
 import numpy as np
 import cv2
 import pandas as pd
-from mtcnn import MTCNN
-# import mediapipe as mp
-
-# mp_face_mesh = mp.solutions.face_mesh
-# face_mesh = mp_face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, min_detection_confidence=0.5)
+import mediapipe as mp
 
 YELLOW = "\033[33m"
+RED = "\033[31m"
 RESET = "\033[0m"
 
 def load_face_data(face_data_path):
@@ -105,83 +102,49 @@ def motion_blur_score(image : np.ndarray) -> float:
     return round(score, 2)
 
 
-def align_face(img_array, detector):
-    if img_array.shape[-1] == 3 and np.mean(img_array[:, :, 0]) < np.mean(img_array[:, :, 2]):
-        img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
-    results = detector.detect_faces(img_array)
-
-    keypoints = results[0]['keypoints']
-    
-    if 'left_eye' not in keypoints or 'right_eye' not in keypoints:
-        print("Impossible to align face, missing key points")
-        return img_array
-
-    left_eye, right_eye = keypoints['left_eye'], keypoints['right_eye']
-
-    left_eye = (int(left_eye[0]), int(left_eye[1]))
-    right_eye = (int(right_eye[0]), int(right_eye[1]))
-
-    dx, dy = right_eye[0] - left_eye[0], right_eye[1] - left_eye[1]
-
-    if abs(dx) < 1:
-        print("Distance between eyes too small, alignment ignored")
-        return img_array
-
-    angle = np.degrees(np.arctan2(dy, dx))
-
-    center = ((left_eye[0] + right_eye[0]) // 2, (left_eye[1] + right_eye[1]) // 2)
-
-    if not isinstance(center[0], int) or not isinstance(center[1], int):
-        print(f"Error: center has an invalid format {center}")
-        return img_array
-
-    M = cv2.getRotationMatrix2D(center, angle, 1)
-    aligned_face = cv2.warpAffine(img_array, M, (img_array.shape[1], img_array.shape[0]))
-
-    # x, y, w, h = results[0]['box']
-    # x, y = max(0, x), max(0, y)
-    # aligned_face = aligned_face[y:y + h, x:x + w]
-
-    return aligned_face
-
-def check_face_quality(img_array, detector):
+def check_face_quality(img_array, blur_threshold=2.0, motion_blur_threshold=80.0):
     blur_score = blur_face_score(img_array)
     motion_blur = motion_blur_score(img_array)
-
-    if blur_score < 2 or motion_blur < 80:
-        # print("Face too blurry")
+    print(f"Blur score: {blur_score}, Motion blur: {motion_blur}")
+    if blur_score > 10 :
+        return True
+    elif blur_score < blur_threshold or motion_blur < motion_blur_threshold:
+        print("Face too blurry")
         return False
 
-    if img_array.shape[-1] == 3 and np.mean(img_array[:, :, 0]) < np.mean(img_array[:, :, 2]):
-        img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
-
-    results = detector.detect_faces(img_array)
-    if len(results) == 0:
-        # print("No face detected")
-        return False
     return True
 
 
-# def estimate_rotation_angle(img_array):
-#     # Convertir l'image en RGB
-#     image_rgb = cv2.cvtColor(img_array, cv2.COLOR_BGR2RGB)
+def extract_yaw_pitch_roll(transformation_matrix):
+    R = transformation_matrix[:3, :3]
 
-#     # Détecter les points de repère faciaux
-#     results = face_mesh.process(image_rgb)
+    roll = np.arctan2(R[1, 0], R[0, 0]) * (180 / np.pi)
+    yaw = np.arcsin(-R[2, 0]) * (180 / np.pi)
+    pitch = np.arctan2(R[2, 1], R[2, 2]) * (180 / np.pi)
 
-#     if results.multi_face_landmarks:
-#         landmarks = results.multi_face_landmarks[0].landmark
+    return yaw, pitch, roll
 
-#         # Extraire les coordonnées des points de repère clés
-#         left_eye = np.array([landmarks[33].x, landmarks[33].y])
-#         right_eye = np.array([landmarks[263].x, landmarks[263].y])
 
-#         # Calculer l'angle de rotation
-#         dY = right_eye[1] - left_eye[1]
-#         dX = right_eye[0] - left_eye[0]
-#         angle = np.degrees(np.arctan2(dY, dX))
-
-#         return angle
-#     else:
-#         return "Aucun visage détecté"
+def check_orientation(face, detector):
+    print(f"{YELLOW}Checking face orientation{RESET}")
+    face = np.ascontiguousarray(face, dtype=np.uint8)
+    face_mp = mp.Image(image_format=mp.ImageFormat.SRGB, data=face)
+    # face_mp =face
+    detection_result = detector.detect(face_mp)
+    if detection_result.facial_transformation_matrixes:
+        yaw, pitch, roll = extract_yaw_pitch_roll(detection_result.facial_transformation_matrixes[0])
+        print(f"yaw: {yaw}, pitch: {pitch}, roll: {roll}")
+        if yaw > 25 or yaw < -25 or pitch > 25 or pitch < -25:
+            print(f"{RED}Face orientation is not good{RESET}")
+            cv2.imshow("Face", face)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+            return False
+        return True
+    else:
+        print(f"{RED}Orientation evaluation not possible{RESET}")
+        cv2.imshow("Face", face)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        return False
 

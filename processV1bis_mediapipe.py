@@ -19,7 +19,7 @@ BLUE = "\033[34m"
 MAGENTA = "\033[35m"
 
 MODEL="Facenet512"
-SIMILARITY_THRESHOLD = 0.45
+SIMILARITY_THRESHOLD = 0.5
 DETECTOR_BACKEND = "mtcnn"
 OUTPUT_FACES_FOLDER = "./faces_detected"
 
@@ -35,6 +35,17 @@ class FaceData:
         self.filename = None
 
 def remove_duplicate_faces(faces_detected: list[FaceData]) -> list[FaceData]:
+    """
+    Remove duplicate faces from a list of detected faces by comparing embeddings.
+    
+    Args:
+        faces_detected (list): List of FaceData objects
+    Returns:
+        list: List of unique face data
+    """
+    if len(faces_detected) <= 1:
+        return faces_detected
+
     to_remove = set()
 
     for i in range(len(faces_detected) - 1):
@@ -63,142 +74,23 @@ def remove_duplicate_faces(faces_detected: list[FaceData]) -> list[FaceData]:
                     to_remove.add(i)
                     break
 
-        faces_detected = [face for index, face in enumerate(faces_detected) if index not in to_remove]
+    print(f"{RED}Removing {len(to_remove)} faces{RESET}")
+    faces_detected = [face for index, face in enumerate(faces_detected) if index not in to_remove]
+    print(f"{YELLOW}Faces detected after removing duplicates : {len(faces_detected)}{RESET}")
 
     return faces_detected
 
 
-# def upd_face_data(is_new, match_old_index, best_match_old_index, face, old_faces_data, faces_in_video_processed, face_params):
-#     """
-#     Save face data and image based on whether it's new or updating existing.
-    
-#     Args:
-#         is_new (bool): Whether this is a new face
-#         best_match_old_index (int): Index of best matching face if not new
-#         face: Face image array
-#         old_faces_data (list): Existing face data
-#         faces_in_video_processed (dict): Dictionary of faces found in current video and their embeddings
-#         face_params (dict): Dictionary of face parameters including embedding, confidence, face_w, face_h
-#     """
-#     global IMAGES_IN_FOLDER
-#     if is_new:
-#         id_new_img = IMAGES_IN_FOLDER
-#         IMAGES_IN_FOLDER += 1
-#         face_filename = f"face_{id_new_img}.jpg"
-#         faces_in_video_processed[face_filename] = [face, True]
-#         old_faces_data.append((face_filename, face_params[0], face_params[1], face_params[2]))
-
-#     elif best_match_old_index is not None:
-#         old_face_filename = old_faces_data[best_match_old_index][0]
-#         faces_in_video_processed[old_face_filename] = [face, True]
-#         old_faces_data[best_match_old_index] = (old_face_filename, face_params[0], face_params[1], face_params[2])
-
-#     else:
-#         if match_old_index is not None:
-#             old_face_filename = old_faces_data[match_old_index][0]
-#             faces_in_video_processed.setdefault(old_face_filename, [face, False])
-
-
-# def find_matching_face(face_params, old_faces_data):
-#     """
-#     Find if the face matches any existing faces in database.
-    
-#     Args:
-#         face_params (list): Face parameters including embedding, confidence, face_w * face_h
-#         old_faces_data (list): Existing face data
-#     Returns:
-#         tuple: (is_new, best_match_old_index, match_old_index) 
-#     """
-#     is_new = True
-#     best_match_old_index = None
-#     match_old_index = None
-#     for i, (filename, known_embedding, old_confidence, old_size) in enumerate(old_faces_data):
-#         try:
-#             result = DeepFace.verify(face_params[0], known_embedding, model_name=MODEL, distance_metric="cosine", silent=True, threshold=SIMILARITY_THRESHOLD, detector_backend=DETECTOR_BACKEND, enforce_detection=False)
-#             # if result["verified"]:
-#             #     print(f"{GREEN}result: {result['verified']} - time processing: {result['time']} - distance: {result['distance']}{RESET}")
-#             # else:
-#             #     print(f"{RED}result: {result['verified']} - time processing: {result['time']} - distance: {result['distance']}{RESET}")
-#             if result["verified"]:
-#                 is_new = False
-#                 match_old_index = i
-#                 if face_params[1] > old_confidence:
-#                     best_match_old_index = i
-#                 break
-#         except Exception as e:
-#             print(f"Error: {e}")
-#             return False, None, None
-                
-#     return is_new, best_match_old_index, match_old_index
-
-# def process_detection(detection, frame, h, w, faces_in_video_processed, old_faces_data):
-#     """
-#     Process a single face detection.
-    
-#     Args:
-#         detection: MediaPipe face detection
-#         frame: Video frame
-#         h, w: Frame dimensions
-#         detection_count (int): Running detection count
-#         face_data (list): Existing face data
-#         faces_in_video_processed (list): List of faces found in current video
-#         output_folder (str): Folder to save face images
-#     """
-
-#     bboxC = detection.location_data.relative_bounding_box
-#     x = max(0, int(bboxC.xmin * w))
-#     y = max(0, int(bboxC.ymin * h))
-#     face_w = int(bboxC.width * w)
-#     face_h = int(bboxC.height * h)
-
-#     face = frame[y:y + face_h, x:x + face_w]
-#     confidence = detection.score[0]
-#     detector = MTCNN()
-
-#     if not check_face_quality(face, detector):
-#         return
-
-#     if face.shape[0] > 0 and face.shape[1] > 0:
-#         try:
-#             # face_aligned = align_face(face, detector)
-#             embedding = DeepFace.represent(face, model_name=MODEL, enforce_detection=False, detector_backend=DETECTOR_BACKEND)[0]["embedding"]
-#             face_params = [embedding, confidence, face_w * face_h]
-#             is_new, best_match_old_index, match_old_index = find_matching_face(face_params, old_faces_data)
-#             upd_face_data(is_new, match_old_index, best_match_old_index, face, old_faces_data, faces_in_video_processed, face_params)
-
-#         except Exception as e:
-#             print(f"Error : {e}")
-
-# def process_frame(frame, face_detection, h, w, faces_in_video_processed, old_faces_data):
-#     """
-#     Process a single video frame to detect and analyze faces.
-    
-#     Args:
-#         frame: Video frame to process
-#         face_detection: MediaPipe face detection model
-#         h, w: Frame dimensions
-#         faces_in_video_processed (list): List of faces found in current video
-#         output_folder (str): Folder to save face images
-#         old_faces_data (list): Existing face data
-#     """
-#     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-#     results = face_detection.process(frame_rgb)
-
-#     if results.detections:
-#         for detection in results.detections:
-#             process_detection(detection, frame, h, w, faces_in_video_processed, old_faces_data)
-
-
-def extract_face_datas(detection, frame, detector) -> FaceData:
+def extract_face_datas(detection, frame) -> FaceData:
     """
-    Extract face data from a detected face.
-    
+    Extract face data from a detected face and record them in a FaceData object.
+
     Args:
         detection: MediaPipe face detection processed
         frame: Video frame
         detector: face detector
     Returns:
-        FaceData: Face data
+        FaceData: Face data object
     """
     try:
         h, w, _ = frame.shape
@@ -211,7 +103,7 @@ def extract_face_datas(detection, frame, detector) -> FaceData:
         face = frame[y:y + face_h, x:x + face_w]
         confidence = detection.score[0]
 
-        if  face.shape[0] > 0 and face.shape[1] > 0 and check_face_quality(face, detector):
+        if  face.shape[0] > 0 and face.shape[1] > 0 and check_face_quality(face):
             # face_aligned = align_face(face, detector)
             embedding = DeepFace.represent(face, model_name=MODEL, enforce_detection=False, detector_backend="skip")[0]["embedding"]
             return FaceData(face, embedding, confidence, face_w, face_h)
@@ -221,7 +113,7 @@ def extract_face_datas(detection, frame, detector) -> FaceData:
         return None
         
 
-def detect_faces_in_video(video, rotation, frame_skip) -> list:
+def detect_faces_in_video(video : cv2.VideoCapture, rotation : int, frame_skip : int) -> list[FaceData]:
     """
     Process video frames to detect faces.
     
@@ -231,13 +123,12 @@ def detect_faces_in_video(video, rotation, frame_skip) -> list:
         frame_skip (int): Number of frames to skip between processing
         
     Returns:
-        list: List of face data found in this video
+        list: List of FaceData objects found in this video
     """
 
     frame_count = 0
     mp_face_detection = mp.solutions.face_detection
     faces_detected = []
-    detector = MTCNN()
 
     with mp_face_detection.FaceDetection(min_detection_confidence=0.5) as face_detection:
         while video.isOpened():
@@ -256,27 +147,25 @@ def detect_faces_in_video(video, rotation, frame_skip) -> list:
 
             if results.detections:
                 for detection in results.detections:
-                    face_data = extract_face_datas(detection, frame, detector)
+                    face_data = extract_face_datas(detection, frame)
                     if face_data is not None:
                         faces_detected.append(face_data)
-
     return faces_detected
 
 def verify_faces_detected(faces_detected: list[FaceData], old_faces_data: list) -> list[FaceData]:
     """
-    Process detected faces and update face data.
-    
+    Verify faces detected by comparing embeddings to old faces data
+    If the face is not a new face, confidences are compared to determine if the face is a more confident match than the old one.
+
     Args:
         faces_detected (list): List of FaceData objects
         old_faces_data (list): List of old face data
     Returns:
-        dict: Dictionary of faces found in this video
+        list: List of FaceData objects updated
     """
     if len(faces_detected) == 0:
         return []
     
-    faces_detected = remove_duplicate_faces(faces_detected)
-
     for face_data in faces_detected:
         for i, (filename, known_embedding, old_confidence, old_size) in enumerate(old_faces_data):
             try:
@@ -302,15 +191,18 @@ def verify_faces_detected(faces_detected: list[FaceData], old_faces_data: list) 
     
     return faces_detected
 
-def process_faces_detected(faces_detected: list[FaceData], old_faces_data: list) -> dict:
+
+def process_verified_faces(faces_detected: list[FaceData], old_faces_data: list) -> dict:
     """
-    Process detected faces and update face data.
+    Process verified faces and update face data.
+    If the face is a new face, it is added to the embeddings list.
+    If the face is not a new face but has a better confidence, the old face is updated in the embeddings list.
     
     Args:
         faces_detected (list): List of FaceData objects
         old_faces_data (list): List of old face data
     Returns:
-        dict: Dictionary of faces found in this video
+        dict: Dictionary of faces found in this video with a boolean indicating if the face must be saved/updated
     """
     faces_in_processed_video = {}
 
@@ -320,8 +212,10 @@ def process_faces_detected(faces_detected: list[FaceData], old_faces_data: list)
     for face_data in faces_detected:
         if face_data.is_new and not face_data.filename:
             face_data.filename = f"{generate_random_string(16)}.jpg"
+            old_faces_data.append((face_data.filename, face_data.embedding, face_data.confidence, face_data.size))
+        elif face_data.is_better_match:
+            old_faces_data[face_data.match_old_index] = (face_data.filename, face_data.embedding, face_data.confidence, face_data.size)
         faces_in_processed_video[face_data.filename] = [face_data.face, face_data.is_new or face_data.is_better_match]
-        old_faces_data.append((face_data.filename, face_data.embedding, face_data.confidence, face_data.size))
 
     return faces_in_processed_video
 
@@ -351,8 +245,16 @@ def extract_faces(video_path, frame_skip=10, old_faces_data_path=None, csv_face_
     os.makedirs(output_folder, exist_ok=True)
 
     faces_detected = detect_faces_in_video(video, rotation, frame_skip)
-    faces_detected_unique = verify_faces_detected(faces_detected, old_faces_data)
-    faces_in_processed_video = process_faces_detected(faces_detected_unique, old_faces_data)
+    print(f"{GREEN}Faces detected : {len(faces_detected)}{RESET}")
+
+    faces_detected_unique = remove_duplicate_faces(faces_detected)
+    print(f"{GREEN}Faces detected without duplicates : {len(faces_detected_unique)}{RESET}")
+
+    faces_detected_datas_updated = verify_faces_detected(faces_detected_unique, old_faces_data)
+    print(f"{GREEN}New faces detected : {len([face for face in faces_detected_datas_updated if face.is_new])}{RESET}")
+
+    faces_in_processed_video = process_verified_faces(faces_detected_datas_updated, old_faces_data)
+    print(f"{GREEN}Faces in processed video : {len(faces_in_processed_video)}{RESET}")
 
     video.release()
     cv2.destroyAllWindows()

@@ -85,6 +85,7 @@ py-cpuinfo==9.0.0
 pycparser==2.22
 pydantic_core==2.27.2
 Pygments @ file:///home/conda/feedstock_root/build_artifacts/pygments_1736243443484/work
+pymediainfo==7.0.1
 pyparsing==3.2.1
 pyreadline3==3.5.4
 PySocks==1.7.1

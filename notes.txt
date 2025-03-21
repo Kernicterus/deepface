@@ -1,0 +1,1 @@
+3 vid avec process mediapipe V1bis :  23.68300747871399 seconds

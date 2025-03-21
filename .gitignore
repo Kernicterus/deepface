@@ -1,8 +1,10 @@
 faces_detected/
-face_data.npy
-face_by_video.csv
 videos/
 vid1/
+debug/
+
+face_data.npy
+face_by_video.csv
 
 *.jpg
 *.png
