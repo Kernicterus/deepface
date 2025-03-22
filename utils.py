@@ -5,6 +5,7 @@ import random
 import string
 from pymediainfo import MediaInfo
 
+
 def get_video_rotation(video_path):
     """
     Get the rotation of a video by using pymediainfo to parse the video metadata.
@@ -26,6 +27,16 @@ def get_video_rotation(video_path):
 
 
 def rotate_frame(frame, rotation):
+    """
+    Rotate a frame by a given angle previously extracted from the video metadata.
+
+    Args:
+        frame (numpy.ndarray): The frame to rotate
+        rotation (float): The angle to rotate the frame by
+    
+    Returns:
+        numpy.ndarray: The rotated frame
+    """
     if rotation > 45 and rotation < 135:
         return cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
     elif rotation > 225 and rotation < 315:
@@ -36,20 +47,31 @@ def rotate_frame(frame, rotation):
 
 
 def generate_random_string(length=10):
+    """
+    Generate a random string of a given length.
+
+    Args:
+        length (int): Length of the random string. Default is 10.
+
+    Returns:
+        str: Random string of the given length
+    """
+
     characters = string.ascii_letters + string.digits
     return ''.join(random.choices(characters, k=length))
 
 
 def count_files_in_folder(folder_path, only_videos=False, only_images=False):
     """
-    Compte le nombre de fichiers dans un dossier.
-    
+    Count the number of files in a folder.
+
     Args:
-        folder_path (str): Chemin du dossier à analyser
-        only_videos (bool): Si True, compte uniquement les fichiers vidéo
-        only_images (bool): Si True, compte uniquement les fichiers images
+        folder_path (str): Path to the folder to analyze
+        only_videos (bool): If True, count only video files
+        only_images (bool): If True, count only image files
+    
     Returns:
-        int: Nombre de fichiers trouvés
+        int: Number of files in the folder
     """
     count = 0
     video_extensions = ('.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv')
@@ -70,9 +92,6 @@ def count_files_in_folder(folder_path, only_videos=False, only_images=False):
                 count += 1
                 
     return count
-
-
-
 
 
 # def get_video_rotation(video_path):
@@ -121,13 +140,13 @@ def count_files_in_folder(folder_path, only_videos=False, only_images=False):
 
 def get_video_paths(video_folder):
     """
-    Extrait tous les chemins des fichiers vidéo dans le dossier spécifié.
+    Extract all video paths from a given folder.
     
     Args:
-        video_folder (str): Chemin du dossier contenant les vidéos
+        video_folder (str): Path to the folder containing videos
         
     Returns:
-        list: Liste des chemins complets des fichiers vidéo
+        list: List of video paths
     """
     video_extensions = ('.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv')
     
@@ -143,6 +162,16 @@ def get_video_paths(video_folder):
 
 
 def find_videos_by_id(file_id, csv_file):
+    """
+    Find all video paths in a CSV file that match a given file ID.
+    
+    Args:
+        file_id (str): The ID to search for in the CSV file
+        csv_file (str): The path to the CSV file containing video paths
+
+    Returns:
+        list: List of video paths that match the given file ID
+    """
     df = pd.read_csv(csv_file, skip_blank_lines=True)
     
     if 'video_path' not in df.columns:

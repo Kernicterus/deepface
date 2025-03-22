@@ -12,6 +12,9 @@ video_folder = None
 image_folder = None
 
 def timer(func):
+    """
+    Decorator to measure the execution time of a function.
+    """
     def wrapper(*args, **kwargs):
         start_time = time.time()
         result = func(*args, **kwargs)
@@ -69,7 +72,7 @@ def display_image(event, image_listbox, image_label, images, video_listbox):
 def display_video_associations(img_path, video_listbox):
     global csv_file
     video_listbox.delete(0, tk.END)
-    if csv_file:
+    if csv_file and csv_file != "":
         video_list = find_videos_by_id(img_path, csv_file)
         for video_path in video_list:
             video_listbox.insert(tk.END, video_path)
@@ -81,7 +84,7 @@ def analyze_videos(message_label, frame_entry):
     global video_folder
     global csv_file
     global npy_file
-    if video_folder is None:
+    if video_folder is None or video_folder == "":
         message_label.config(text="No video folder selected")
         return
     try :
@@ -99,6 +102,9 @@ def analyze_videos(message_label, frame_entry):
 
 
 def main():
+    """
+    Main function to run the video analyzer and image search application with a GUI.
+    """
     root = tk.Tk()
     root.title("Video Analyzer & Image Search")
 

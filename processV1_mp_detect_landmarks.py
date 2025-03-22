@@ -8,6 +8,7 @@ import os
 from deepface import DeepFace
 from utils import get_video_rotation, rotate_frame, generate_random_string
 from face_utils import load_face_data, save_face_img, upd_csv_video_faces, check_face_quality, check_orientation
+from classes import FaceData
 
 RESET = "\033[0m"
 BOLD = "\033[1m"
@@ -27,25 +28,15 @@ DETECTION_THRESHOLD = 0.5
 BLUR_THRESHOLD = 1.8
 MOTION_BLUR_THRESHOLD = 80.0
 
-class FaceData:
-    def __init__(self, face, confidence, face_w, face_h):
-        self.face = face
-        self.embedding = None
-        self.confidence = confidence
-        self.size = face_w * face_h
-        self.is_new = True
-        self.match_old_index = None
-        self.is_better_match = False
-        self.filename = None
 
 def remove_duplicate_faces(faces_detected: list[FaceData]) -> list[FaceData]:
     """
     Remove duplicate faces from a list of detected faces by comparing embeddings.
     
     Args:
-        faces_detected (list): List of FaceData objects
+        faces_detected (list[FaceData]): List of FaceData objects containing face embeddings
     Returns:
-        list: List of unique face data
+        list[FaceData]: List of unique FaceData objects after removing duplicates based on embedding similarity
     """
     if len(faces_detected) <= 1:
         return faces_detected
@@ -86,15 +77,25 @@ def remove_duplicate_faces(faces_detected: list[FaceData]) -> list[FaceData]:
         
 def add_embeddings(faces_detected: list[FaceData]) -> list[FaceData]:
     """
-    Add embeddings to the faces detected.
+    Add embeddings to the faces detected using DeepFace.
+    
+    Args:
+        faces_detected (list): List of FaceData objects
+    Returns:
+        list: List of FaceData objects with embeddings added
     """
+    faces_detected_with_embeddings = []
     for face_data in faces_detected:
-        face_data.embedding = DeepFace.represent(face_data.face, model_name=MODEL, enforce_detection=False, detector_backend="skip")[0]["embedding"]
-    return faces_detected
+        try:
+            face_data.embedding = DeepFace.represent(face_data.face, model_name=MODEL, enforce_detection=False, detector_backend="skip")[0]["embedding"]
+            faces_detected_with_embeddings.append(face_data)
+        except Exception as e:
+            print(f"Error DeepFace.represent: {e}")
+    return faces_detected_with_embeddings
 
 def discard_unqualified_faces(faces_detected: list[FaceData]) -> list[FaceData]:
     """
-    Discard faces that do not meet the quality criteria.
+    Discard faces that do not meet the quality criteria such as blur and orientation.
 
     Args:
         faces_detected (list): List of FaceData objects
@@ -121,12 +122,12 @@ def detect_faces_in_video(video : cv2.VideoCapture, rotation : int, frame_skip :
     Process video frames to detect faces.
     
     Args:
-        video: OpenCV video capture object
-        rotation (int): Video rotation angle
-        frame_skip (int): Number of frames to skip between processing
+        video (cv2.VideoCapture): OpenCV video capture object
+        rotation (int): Video rotation angle in degrees (0, 90, 180, or 270)
+        frame_skip (int): Number of frames to skip between processing. Higher values improve speed but may miss faces.
         
     Returns:
-        list: List of FaceData objects found in this video
+        list[FaceData]: List of detected faces with their associated data (face image, confidence score, width, height)
     """
 
     frame_count = 0
@@ -167,20 +168,26 @@ def detect_faces_in_video(video : cv2.VideoCapture, rotation : int, frame_skip :
                 face = frame[bounding_box.origin_y:bounding_box.origin_y + bounding_box.height, bounding_box.origin_x:bounding_box.origin_x + bounding_box.width]
                 
                 if face.shape[0] > 0 and face.shape[1] > 0:
-                    faces_detected.append(FaceData(face, confidence, bounding_box.width, bounding_box.height))
+                    face_data = FaceData(
+                        face=face,
+                        confidence=confidence,
+                        face_w=bounding_box.width,
+                        face_h=bounding_box.height
+                        )
+                    faces_detected.append(face_data)
     return faces_detected
 
 
 def verify_faces_detected(faces_detected: list[FaceData], old_faces_data: list) -> list[FaceData]:
     """
-    Verify faces detected by comparing embeddings to old faces data
+    Verify faces detected by comparing embeddings to old faces data.
     If the face is not a new face, confidences are compared to determine if the face is a more confident match than the old one.
 
     Args:
-        faces_detected (list): List of FaceData objects
-        old_faces_data (list): List of old face data
+        faces_detected (list[FaceData]): List of FaceData objects containing face information
+        old_faces_data (list): List of tuples containing (filename, embedding, confidence, size) for previously detected faces
     Returns:
-        list: List of FaceData objects updated
+        list[FaceData]: List of FaceData objects with updated match information
     """
     if len(faces_detected) == 0:
         return []
@@ -218,10 +225,11 @@ def process_verified_faces(faces_detected: list[FaceData], old_faces_data: list)
     If the face is not a new face but has a better confidence, the old face is updated in the embeddings list.
     
     Args:
-        faces_detected (list): List of FaceData objects
-        old_faces_data (list): List of old face data
+        faces_detected (list[FaceData]): List of FaceData objects containing face information
+        old_faces_data (list): List of tuples containing (filename, embedding, confidence, size) for previously detected faces
     Returns:
-        dict: Dictionary of faces found in this video with a boolean indicating if the face must be saved/updated
+        dict: Dictionary mapping filenames to tuples of (face_image, needs_saving), where needs_saving is True if the face
+             is new or has better confidence than existing data
     """
     faces_in_processed_video = {}
 
@@ -231,7 +239,7 @@ def process_verified_faces(faces_detected: list[FaceData], old_faces_data: list)
     for face_data in faces_detected:
         if face_data.is_new and not face_data.filename:
             face_data.filename = f"{generate_random_string(16)}.jpg"
-            old_faces_data.append((face_data.filename, face_data.embedding, face_data.confidence, face_data.size))
+            old_faces_data.append((face_data.filename, face_data.embedding, face_data.confidence, face_data.face_h * face_data.face_w))
         elif face_data.is_better_match:
             old_faces_data[face_data.match_old_index] = (face_data.filename, face_data.embedding, face_data.confidence, face_data.size)
         faces_in_processed_video[face_data.filename] = [face_data.face, face_data.is_new or face_data.is_better_match]
@@ -245,9 +253,9 @@ def extract_faces(video_path, frame_skip=10, old_faces_data_path=None, csv_face_
     
     Args:
         video_path (str): Path to the video file
-        frame_skip (int): Number of frames to skip between processing
-        old_faces_data_path (str): Path where face embeddings data are saved
-        csv_face_by_video_path (str): Path to save face-video mapping CSV
+        frame_skip (int): Number of frames to skip between processing. Default is 10.
+        old_faces_data_path (str): Path where face embeddings data are saved. Default is "face_data.npy".
+        csv_face_by_video_path (str): Path to save face-video mapping CSV. Default is "face_by_video.csv".
     """
 
     if old_faces_data_path is None or old_faces_data_path == "":

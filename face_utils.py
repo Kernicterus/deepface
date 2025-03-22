@@ -8,7 +8,7 @@ YELLOW = "\033[33m"
 RED = "\033[31m"
 RESET = "\033[0m"
 
-def load_face_data(face_data_path):
+def load_face_data(face_data_path : str) -> list:
     """
     Load existing face data from file or create empty list if none exists.
     
@@ -23,7 +23,14 @@ def load_face_data(face_data_path):
     return []
 
 
-def save_face_img(faces_in_video_processed, output_folder):
+def save_face_img(faces_in_video_processed : dict, output_folder : str):
+    """
+    Save face images to a specified output folder.
+    
+    Args:
+        faces_in_video_processed (dict): Dictionary of faces to save
+        output_folder (str): Path to the output folder
+    """
     if faces_in_video_processed is None or len(faces_in_video_processed) == 0:
         return
     for face_filename, (face, to_save) in faces_in_video_processed.items():
@@ -32,13 +39,13 @@ def save_face_img(faces_in_video_processed, output_folder):
             cv2.imwrite(face_path, face)
 
 
-def upd_csv_video_faces(faces_in_video_processed : dict, video_name, csv_path):
+def upd_csv_video_faces(faces_in_video_processed : dict, video_name : str, csv_path : str):
     """
     Updates or adds a row in a CSV file with the video path and associated faces.
     
     Args:
         faces_in_video_processed (dict): Dictionary of faces to record in the following columns
-        video_path (str): Path of the video to record
+        video_name (str): Name of the video to record
         csv_path (str): Path to the CSV file
     """
     if faces_in_video_processed is None or len(faces_in_video_processed) == 0:
@@ -74,6 +81,15 @@ def upd_csv_video_faces(faces_in_video_processed : dict, video_name, csv_path):
 
 
 def blur_face_score(npy_face: np.ndarray) -> float:
+    """
+    Calculate the blur score of a face image.
+    
+    Args:
+        npy_face (numpy.ndarray): The face image to evaluate
+        
+    Returns:
+        float: The blur score of the face image (0 = blurry, 100 = sharp)
+    """
     if len(npy_face.shape) == 3 and npy_face.shape[2] == 3:
         npy_face = cv2.cvtColor(npy_face, cv2.COLOR_RGB2GRAY)
 
@@ -87,6 +103,16 @@ def blur_face_score(npy_face: np.ndarray) -> float:
 
 
 def motion_blur_score(image : np.ndarray) -> float:
+    """
+    Calculate the motion blur score of a face image.
+    
+    Args:
+        image (numpy.ndarray): The face image to evaluate
+
+    Returns:
+        float: The motion blur score of the face image (0 = blurry, 100 = sharp)
+    """
+
     if len(image.shape) == 3:
         image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
@@ -102,7 +128,17 @@ def motion_blur_score(image : np.ndarray) -> float:
     return round(score, 2)
 
 
-def check_face_quality(img_array, blur_threshold=2.0, motion_blur_threshold=80.0):
+def check_face_quality(img_array: np.ndarray, blur_threshold: float = 2.0, motion_blur_threshold: float = 80.0) -> bool:
+    """
+    Check the quality of a face image based on blur and motion blur scores.
+    
+    Args:
+        img_array (numpy.ndarray): The face image to evaluate
+        blur_threshold (float): The threshold for blur score
+    
+    Returns:
+        bool: True if the face image is of good quality, False otherwise
+    """
     blur_score = blur_face_score(img_array)
     motion_blur = motion_blur_score(img_array)
     print(f"Blur score: {blur_score}, Motion blur: {motion_blur}")
@@ -115,7 +151,16 @@ def check_face_quality(img_array, blur_threshold=2.0, motion_blur_threshold=80.0
     return True
 
 
-def extract_yaw_pitch_roll(transformation_matrix):
+def extract_yaw_pitch_roll(transformation_matrix: np.ndarray) -> tuple[float, float, float]:
+    """
+    Extract the yaw, pitch, and roll angles from a transformation matrix provided by MediaPipe.
+
+    Args:
+        transformation_matrix (numpy.ndarray): The transformation matrix to extract the angles from
+
+    Returns:
+        tuple: The yaw, pitch, and roll angles
+    """
     R = transformation_matrix[:3, :3]
 
     roll = np.arctan2(R[1, 0], R[0, 0]) * (180 / np.pi)
@@ -125,7 +170,17 @@ def extract_yaw_pitch_roll(transformation_matrix):
     return yaw, pitch, roll
 
 
-def check_orientation(face, detector):
+def check_orientation(face: np.ndarray, detector: mp.solutions.face_detection.FaceDetection) -> bool:
+    """
+    Check the orientation of a face image.
+    
+    Args:
+        face (numpy.ndarray): The face image to evaluate
+        detector (mediapipe.solutions.face_detection.FaceDetection): The face detection model
+
+    Returns:
+        bool: True if the face image is of good orientation, False otherwise
+    """
     print(f"{YELLOW}Checking face orientation{RESET}")
     face = np.ascontiguousarray(face, dtype=np.uint8)
     face_mp = mp.Image(image_format=mp.ImageFormat.SRGB, data=face)
@@ -135,16 +190,16 @@ def check_orientation(face, detector):
         yaw, pitch, roll = extract_yaw_pitch_roll(detection_result.facial_transformation_matrixes[0])
         print(f"yaw: {yaw}, pitch: {pitch}, roll: {roll}")
         if yaw > 25 or yaw < -25 or pitch > 25 or pitch < -25:
-            print(f"{RED}Face orientation is not good{RESET}")
-            cv2.imshow("Face", face)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+            print(f"{RED}Face orientation is not good : reject{RESET}")
+            # cv2.imshow("Face", face)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
             return False
         return True
     else:
-        print(f"{RED}Orientation evaluation not possible{RESET}")
-        cv2.imshow("Face", face)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        print(f"{RED}Orientation evaluation not possible : reject{RESET}")
+        # cv2.imshow("Face", face)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
         return False
 
