@@ -239,7 +239,7 @@ def process_verified_faces(faces_detected: list[FaceData], old_faces_data: list)
             face_data.filename = f"{generate_random_string(16)}.jpg"
             old_faces_data.append((face_data.filename, face_data.embedding, face_data.confidence, face_data.face_h * face_data.face_w))
         elif face_data.is_better_match:
-            old_faces_data[face_data.match_old_index] = (face_data.filename, face_data.embedding, face_data.confidence, face_data.size)
+            old_faces_data[face_data.match_old_index] = (face_data.filename, face_data.embedding, face_data.confidence, face_data.face_h * face_data.face_w)
         faces_in_processed_video[face_data.filename] = [face_data.face, face_data.is_new or face_data.is_better_match]
 
     return faces_in_processed_video
