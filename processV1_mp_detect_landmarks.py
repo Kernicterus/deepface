@@ -69,9 +69,8 @@ def remove_duplicate_faces(faces_detected: list[FaceData]) -> list[FaceData]:
                     to_remove.add(i)
                     break
 
-    print(f"{RED}Removing {len(to_remove)} faces{RESET}")
+    print(f"{RED}Removing {len(to_remove)} faces duplicated{RESET}")
     faces_detected = [face for index, face in enumerate(faces_detected) if index not in to_remove]
-    print(f"{YELLOW}Faces detected after removing duplicates : {len(faces_detected)}{RESET}")
 
     return faces_detected
         
