@@ -139,6 +139,7 @@ def check_face_quality(img_array: np.ndarray, blur_threshold: float = 2.0, motio
     Returns:
         bool: True if the face image is of good quality, False otherwise
     """
+    print(f"{YELLOW}Checking face quality{RESET}")
     blur_score = blur_face_score(img_array)
     motion_blur = motion_blur_score(img_array)
     print(f"Blur score: {blur_score}, Motion blur: {motion_blur}")

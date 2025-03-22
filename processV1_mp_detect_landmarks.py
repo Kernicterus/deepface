@@ -111,7 +111,6 @@ def discard_unqualified_faces(faces_detected: list[FaceData]) -> list[FaceData]:
                                         )
     detector = vision.FaceLandmarker.create_from_options(options)
     for face_data in faces_detected:
-        print(f"{BLUE}FONCTION DISCARD UNQUALIFIED FACES{RESET}")
         if check_face_quality(face_data.face, BLUR_THRESHOLD, MOTION_BLUR_THRESHOLD) and check_orientation(face_data.face, detector):
             faces_detected_qualified.append(face_data)
     return faces_detected_qualified
