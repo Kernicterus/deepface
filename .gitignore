@@ -16,3 +16,11 @@ face_by_video.csv
 *.wmv
 
 
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+*.pywz
