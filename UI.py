@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import filedialog, ttk
 import os
 from PIL import Image, ImageTk
-from processV1_mp_detect_landmarks import extract_faces
+from video_processing import extract_faces
 from utils import get_video_paths, find_videos_by_id
 import time
 

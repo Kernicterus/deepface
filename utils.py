@@ -37,11 +37,11 @@ def rotate_frame(frame, rotation):
     Returns:
         numpy.ndarray: The rotated frame
     """
-    if rotation > 45 and rotation < 135:
+    if rotation > 45 and rotation <= 135:
         return cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
-    elif rotation > 225 and rotation < 315:
+    elif rotation > 225 and rotation <= 315:
         return cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
-    elif rotation > 135 and rotation < 225:
+    elif rotation > 135 and rotation <= 225:
         return cv2.rotate(frame, cv2.ROTATE_180)
     return frame 
 

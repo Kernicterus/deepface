@@ -20,7 +20,10 @@ BLUE = "\033[34m"
 MAGENTA = "\033[35m"
 
 MODEL="Facenet512"
-SIMILARITY_THRESHOLD = 0.5
+SIMILARITY_THRESHOLD = 0.5 
+# cf hdbscan cluster
+# chromadb
+
 OUTPUT_FACES_FOLDER = "./faces_detected"
 LANDMARK_MODEL_PATH = r"F:/PythonProjects/deepface/face_landmarker.task"
 DETECTION_MODEL_PATH = r"F:/PythonProjects/deepface/blaze_face_short_range.tflite"
@@ -73,10 +76,11 @@ def remove_duplicate_faces(faces_detected: list[FaceData]) -> list[FaceData]:
     faces_detected = [face for index, face in enumerate(faces_detected) if index not in to_remove]
 
     return faces_detected
-        
+
+
 def add_embeddings(faces_detected: list[FaceData]) -> list[FaceData]:
     """
-    Add embeddings to the faces detected using DeepFace.
+    Join embeddings to the faces detected by DeepFace in the FaceData objects list.
     
     Args:
         faces_detected (list): List of FaceData objects
@@ -91,6 +95,7 @@ def add_embeddings(faces_detected: list[FaceData]) -> list[FaceData]:
         except Exception as e:
             print(f"Error DeepFace.represent: {e}")
     return faces_detected_with_embeddings
+
 
 def discard_unqualified_faces(faces_detected: list[FaceData]) -> list[FaceData]:
     """
